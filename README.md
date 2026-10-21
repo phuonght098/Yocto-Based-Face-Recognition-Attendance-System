@@ -1,277 +1,185 @@
-<<<<<<< HEAD
 # Yocto-Based Face Recognition Attendance System
 
 An embedded face recognition attendance system built with the Yocto Project for Raspberry Pi 4B. The system integrates a Wi-Fi RTSP camera, on-device face detection and recognition, a PIR motion sensor, attendance logging, and an SPI TFT display.
 
-The project provides a custom Yocto layer, `meta-phuong`, containing application recipes, AI model packaging, network configuration, sensor integration, and kernel/device-tree configuration.
+The project provides a custom Yocto layer, `meta-phuong`, containing application recipes, system configuration, device-tree overlays, and kernel configuration required to build and deploy the system.
+<img width="1600" height="720" alt="9e099f21f50775592c16" src="https://github.com/user-attachments/assets/a6f36716-1ae6-48d3-837f-6a40f13eb322" />
 
-## 1. Project Overview
+## 1. Features
 
-The objective of this project is to build a dedicated embedded Linux platform for face recognition-based attendance tracking.
+- **Embedded face recognition:** Uses OpenCV, YuNet face detection, SFace face recognition, and ONNX Runtime.
+- **Attendance logging:** Records recognized employees and attendance timestamps.
+- **Web dashboard:** Provides browser-based access to attendance information and CSV export.
+- **Backup and restore:** Supports backing up and restoring attendance-related data.
+- **Performance reporting:** Collects performance measurements for analysis.
+- **Custom Yocto integration:** Packages applications, dependencies, configuration files, and services into the target image.
 
-Instead of installing applications manually on a general-purpose Linux distribution, the system uses Yocto to build a customized Linux image for Raspberry Pi 4B. Application components and hardware-specific configuration are integrated through BitBake recipes in the custom `meta-phuong` layer.
+## 2. Hardware and Software Requirements
 
-### Key Features
+### Hardware
 
-- Custom embedded Linux image built with Yocto Project
-- PIR motion detection through GPIO, SPI TFT display integration
-- Attendance and performance logging using CSV files
-- Command-line backup, restore, and performance reporting
-- Web dashboard for viewing attendance records and exporting CSV data
+- Raspberry Pi 4 Model B
+- microSD card
+- Wi-Fi RTSP camera
+- PIR motion sensor
+- SPI TFT display
+- Network connection for the Raspberry Pi and camera
 
+### Software
 
-## 2. Hardware and Software
+The build configuration used for this project includes:
 
-### 2.1 Hardware
-
-| Component           | Purpose                                             |
-|---------------------|-----------------------------------------------------|
-| Raspberry Pi 4B     | Main embedded computing platform                    |
-| Wi-Fi IP camera     | Provides an RTSP video stream                       |
-| HC-SR501 PIR sensor | Detects motion and triggers the attendance workflow |
-| SPI TFT display     | Displays system status and attendance messages      |
-| MicroSD card        | Stores the embedded Linux image and runtime data    |
-| Wi-Fi network       | Connects the device to the camera and local network |
-
-The camera must provide an RTSP stream accessible from the Raspberry Pi. The camera address, credentials, and stream path depend on the actual camera configuration.
-
-The PIR application is configured to read GPIO 17 on `gpiochip0`.
-
-### 2.2 Software Stack
-
-| Component                   | Technology                          |
-|-----------------------------|-------------------------------------|
-| Yocto release series        | Kirkstone                           |
-| Target machine              | `raspberrypi4-64`                   |
-| Image target                | `core-image-weston`                 |
+- Yocto release: Kirkstone
+- Poky version: 4.0.x
+- Machine: `raspberrypi4-64`
+- Image: `core-image-weston`
 
 
-## 3. System Architecture
+## 3. Repository Structure and Recipes
 
-### 3.1 Architecture Diagram
-
-
-
-### 3.2 Attendance Workflow
-
-1. The PIR monitor detects motion through GPIO.
-2. The PIR application publishes a motion event through a local Unix-domain socket.
-3. The attendance controller receives the event and coordinates the recognition workflow.
-4. The face recognition application obtains video frames from the configured RTSP camera.
-5. YuNet detects faces in the video frames.
-6. SFace generates face embeddings, which are compared with locally stored face embeddings.
-7. The attendance controller records attendance information in CSV files.
-8. The controller updates the system status displayed through the SPI TFT framebuffer.
-9. The Web dashboard reads attendance data and makes it available for monitoring and CSV export.
-
-
-## 4. Repository Structure
-
-The custom layer is located at:
+The custom layer is organized as follows:
 
 ```text
 meta-phuong/
 ├── conf/
 │   └── layer.conf
+│
 ├── recipes-ai/
 │   ├── face-app/
+│   │   ├── face-app_1.0.bb
+│   │   └── files/
+│   │       ├── face_ai.cpp
+│   │       └── CMakeLists.txt
+│   │
 │   ├── model/
+│   │   ├── face-models_1.0.bb
+│   │   └── files/
+│   │       ├── face_detection_yunet_2023mar.onnx
+│   │       └── face_recognition_sface_2021dec.onnx
+│   │
 │   └── onnxruntime/
+│       └── onnxruntime_1.18.1.bb
+│
 ├── recipes-apps/
 │   ├── attendance-app/
+│   │   ├── attendance-app_1.0.bb
+│   │   └── files/
+│   │       ├── attendance_app.cpp
+│   │       └── attendance-app.init
+│   │
 │   ├── attendance-web/
+│   │   ├── attendance-web_1.0.bb
+│   │   └── files/
+│   │       ├── app.py
+│   │       ├── attendance-web.conf
+│   │       └── attendance-web.init
+│   │
 │   └── wifi-camera/
+│       ├── wifi-camera_1.0.bb
+│       └── files/
+│           ├── wifi_camera.c
+│           └── wifi-camera.conf
+│
 ├── recipes-connectivity/
 │   ├── networkmanager/
 │   └── phuong-wifi/
+│
 ├── recipes-core/
 │   └── images/
+│       └── core-image-weston.bbappend
+│
 ├── recipes-kernel/
 │   ├── device-tree/
+│   │   ├── attendance-st7735r-overlay.bb
+│   │   └── files/
+│   │       └── attendance-st7735r-overlay.dts
+│   │
 │   └── linux/
-├── recipes-sensors/
-│   └── pir-monitor/
-
+│       ├── linux-raspberrypi_%.bbappend
+│       └── files/
+│           └── st7735r.cfg
+│
+└── recipes-sensors/
+    └── pir-monitor/
+        ├── pir-monitor_1.0.bb
+        └── files/
+            ├── pir_monitor.c
+            └── pir-monitor.service
 ```
 
-### recipes-ai/
+### Recipe Descriptions
 
-Contains recipes related to face recognition and AI inference.
+| Recipe | Purpose |
+|---|---|
+| `face-app` | Builds and installs the C++ face detection and recognition application. |
+| `face-models` | Installs the YuNet face detection and SFace face recognition ONNX models. |
+| `onnxruntime` | Builds and packages ONNX Runtime for inference on the target device. |
+| `attendance-app` | Builds the attendance management application, including backup, restore, and performance reporting. |
+| `attendance-web` | Installs the Python web dashboard and its configuration and startup files. |
+| `wifi-camera` | Builds the camera configuration utility and installs `/etc/wifi-camera.conf`. |
+| `phuong-wifi` | Provides project-specific Wi-Fi configuration integration. |
+| `networkmanager` | Applies project-specific NetworkManager integration or configuration. |
+| `core-image-weston.bbappend` | Extends the base image to include the project's required packages and components. |
+| `attendance-st7735r-overlay` | Builds and installs the SPI TFT device-tree overlay. |
+| `linux-raspberrypi_%.bbappend` | Extends the Raspberry Pi kernel recipe with project-specific configuration. |
+| `pir-monitor` | Builds and installs the PIR sensor monitoring application and its service definition. |
 
-- **face-app/** — Builds the C++ face recognition application, installed as `face-ai`.
-- **model/** — Packages the YuNet face detection and SFace face recognition ONNX models.
-- **onnxruntime/** — Provides the ONNX Runtime 1.18.1 recipe.
+The recipes are responsible for integrating the applications and hardware support into the Yocto build. Runtime configuration files should be modified on the target only when their respective application supports the changes.
 
-### recipes-apps/
+## 4. Build Environment Setup
 
-Contains the primary application components.
+### Initialize the Yocto Environment
 
-- **attendance-app/** — C++ attendance controller, including attendance logging, performance reporting, and backup/restore operations.
-- **attendance-web/** — Python HTTP application for viewing attendance information.
-- **wifi-camera/** — C application using GStreamer to connect to an RTSP stream and monitor video-frame activity.
+Set up the Yocto build environment and initialize the build directory.
 
-### recipes-connectivity/
-
-Contains network-related integration.
-
-- **networkmanager/** — Extends the NetworkManager recipe with project-specific configuration.
-- **phuong-wifi/** — Packages NetworkManager Wi-Fi connection profiles.
-
-
-### recipes-core/
-
-Contains image-level configuration.
-
-- **images/core-image-weston.bbappend** — Extends the `core-image-weston` image with project-specific packages and configuration.
-
-### recipes-kernel/
-
-Contains kernel and display integration.
-
-- **device-tree/** — Packages the TFT Device Tree overlay.
-- **linux/** — Extends the Raspberry Pi Linux kernel recipe and provides a kernel configuration fragment for the display.
-
-The overlay source uses the compatible string `jianda,jd-t18003-t01`. The actual driver binding and framebuffer behavior should be verified on the target hardware.
-
-### recipes-sensors/
-
-Contains the PIR motion monitoring application.
-
-- **pir-monitor/** — Builds the C application and installs its service definition.
-
-
-## 5. Build Instructions
-
-###  Prerequisites
-
-Prepare a Yocto build environment containing:
-
-- Poky for the Kirkstone release
-- Required OpenEmbedded layers, including `meta-oe`, `meta-python`, `meta-networking` and `meta-raspberrypi`
-- The custom `meta-phuong` layer
-
-
-###  Initialize the Build Environment
-
-From the Yocto workspace:
 
 ```bash
 cd ~/yocto
 source poky/oe-init-build-env build
 ```
 
-###  Configure the Target Machine
+### Configure the Target Machine
 
-Edit `conf/local.conf` and verify:
+Ensure the build configuration targets the Raspberry Pi 4B.
 
-```bash
+In `conf/local.conf`:
+
+```bitbake
 MACHINE = "raspberrypi4-64"
 ```
+###  Add the Custom Layer
 
-### Add the Custom Layer
+Add `meta-phuong` to the build configuration.
 
+From the initialized build environment:
 
 ```bash
-bitbake-layers add-layer ../poky/meta-phuong
+bitbake-layers add-layer ../meta-phuong
 ```
 
 
+## 5. Build, Install, Configure, and Operate the System
+
 ### Build the Image
+
+Build the target image:
 
 ```bash
 bitbake core-image-weston
 ```
 
 
-The image is normally located under:
+###  Verify Installed Applications
 
-```text
-tmp/deploy/images/raspberrypi4-64/
-```
-
-The project has produced the following image artifact:
-
-```text
-core-image-weston-raspberrypi4-64.wic.bz2
-```
-
-Use the exact filename generated by your build.
-
-
-## 6. Installation and Configuration
-
-### Configure the Wi-Fi Camera
-
-The camera configuration file is:
-
-```text
-/etc/wifi-camera.conf
-```
-
-Example format:
+On the Raspberry Pi, check the available application commands:
 
 ```bash
-RTSP_URL="rtsp://USERNAME:PASSWORD@CAMERA_IP:554/stream2"
+/usr/bin/attendance-app --help
 ```
 
-Replace the example values with the correct camera credentials, IP address, port, and stream path. The `face-ai` application reads this file by default. The standalone `wifi-camera` application also uses it by default.
-
-
-### Configure Wi-Fi
-
-The `phuong-wifi` recipe installs NetworkManager connection profiles under:
+The attendance application supports the following command-line operations:
 
 ```text
-/etc/NetworkManager/system-connections/
-```
-
-## 7. Runtime Components
-
-### 7.1 face-ai
-
-The face recognition executable is installed at:
-
-```text
-/usr/bin/face-ai
-```
-
-**Responsibilities:**
-
-- Connecting to the RTSP camera
-- Decoding video frames through GStreamer
-- Detecting faces with YuNet
-- Generating face embeddings with SFace
-- Comparing embeddings with the local face registry
-- Retrying after camera connection or frame-reading failures
-
-**Models** are installed under:
-
-```text
-/usr/share/face-recognition/models/
-```
-
-Expected model files:
-
-- `face_detection_yunet_2023mar.onnx`
-- `face_recognition_sface_2021dec.onnx`
-
-Default face registry:
-
-```text
-/var/lib/face-ai/faces.txt
-```
-
-### 7.2 attendance-app
-
-The attendance controller is installed at:
-
-```text
-/usr/bin/attendance-app
-```
-
-**Supported command-line options:**
-
-```bash
 /usr/bin/attendance-app
 /usr/bin/attendance-app --backup [BACKUP_ROOT]
 /usr/bin/attendance-app --restore BACKUP_DIR
@@ -279,171 +187,148 @@ The attendance controller is installed at:
 /usr/bin/attendance-app --help
 ```
 
-The application coordinates the attendance workflow, manages CSV data, supports backup/restore operations, and reports performance information.
 
-### 7.3 pir-monitor
+### Configure the Wi-Fi Camera
 
-The PIR monitor reads GPIO17 on `gpiochip0`.
+Edit the camera configuration:
 
-It publishes newline-delimited JSON motion events through:
+```bash
+vi /etc/wifi-camera.conf
+```
+
+Set the RTSP URL to match the camera's address and stream path.
+
+For example:
+
+```bash
+RTSP_URL="rtsp://USERNAME:PASSWORD@CAMERA_IP:554/stream2"
+```
+
+Replace the example credentials, IP address, and stream path with the actual camera settings.
+
+After updating the configuration, restart the relevant camera or attendance service if required by the installed implementation.
+
+Verify that the camera is reachable and that the RTSP stream can be opened before testing face recognition.
+
+
+###  Check Attendance Data
+
+Attendance records are stored at:
+
+```text
+/var/lib/face-ai/attendance.csv
+```
+
+Performance measurements are stored at:
+
+```text
+/var/lib/face-ai/performance.csv
+```
+
+### Configure the PIR Sensor
+
+The PIR monitor communicates motion events through:
 
 ```text
 /run/pir-monitor/events.sock
 ```
 
-The application includes filtering and cooldown logic to reduce repeated motion events.
+The current hardware configuration uses GPIO 17 on `gpiochip0`.
 
-The recipe installs a systemd unit for the PIR monitor. The attendance controller uses a SysV init script. Startup behavior should be verified against the init system selected for the final image.
+Verify that the GPIO mapping matches the actual wiring and device-tree configuration before operating the sensor.
 
-### 7.4 wifi-camera
+### Configure the SPI TFT Display
 
-The standalone camera application is built in C with GStreamer.
+The custom layer provides the display device-tree overlay and kernel configuration.
 
-Its purpose is to connect to an RTSP stream, decode video, report frame activity, and retry failed sessions. It is useful for camera-pipeline diagnostics.
-
-It is separate from the `face-ai` recognition application.
-
-### 7.5 attendance-web
-
-The Web application is installed at:
+The overlay includes the compatible string:
 
 ```text
-/usr/bin/attendance-web
+jianda,jd-t18003-t01
 ```
 
-It uses Python's standard-library HTTP server and reads configuration from:
+### Access the Web Dashboard
+
+The web application is provided by the `attendance-web` recipe.
+
+Inspect its installation and configuration:
+
+```bash
+ls -l /etc/attendance-web.conf
+```
+
+The existing configuration file is:
 
 ```text
 /etc/attendance-web.conf
 ```
 
-The current application provides **read-only** monitoring and attendance-data access.
 
-| Endpoint       | Purpose                                              |
-|----------------|------------------------------------------------------|
-| `/`            | Dashboard and recent attendance information          |
-| `/employees`   | Names inferred from attendance records and record counts |
-| `/attendance`  | Attendance history                                   |
-| `/export.csv`  | CSV export                                           |
-| `/health`      | Basic HTTP health response                           |
+Determine the configured listening address and port from the application and its installed configuration. Then access the dashboard from a browser using the Raspberry Pi's reachable IP address and configured port.
 
-The `/employees` does **not** represent a separate employee database. The current Web application does **not** provide employee write operations, face enrollment, camera configuration editing, Web-based backup/restore, or role-based user management.
+### Back Up Attendance Data
 
-## 8. Usage and Diagnostics
-
-Run these commands on the Raspberry Pi target.
-
-### 8.1 Check Application Help
+Create a backup using the attendance application:
 
 ```bash
-/usr/bin/attendance-app --help
-/usr/bin/face-ai --help
+/usr/bin/attendance-app --backup
 ```
 
-### 8.2 Register a Face
+### Restore Attendance Data
 
-Register a face using a name:
+Restore from an existing backup directory:
 
 ```bash
-/usr/bin/face-ai --register "Employee Name"
+/usr/bin/attendance-app --restore /path/to/backup-directory
 ```
 
-To specify configuration and registry paths explicitly:
+A restore operation may overwrite existing records. Perform this operation only when the selected backup is correct.
 
-```bash
-/usr/bin/face-ai \
-  --register "Employee Name" \
-  --config /etc/wifi-camera.conf \
-  --db /var/lib/face-ai/faces.txt
-```
+### Generate a Performance Report
 
-Ensure that the person is visible to the camera during registration.
-
-This operation stores a face embedding associated with a name. It does **not** create a complete employee profile or a Web user account.
-
-### 8.3 Run Face Recognition
-
-```bash
-/usr/bin/face-ai
-```
-
-For controlled testing, the matching threshold can be specified explicitly:
-
-```bash
-/usr/bin/face-ai --threshold 0.40
-```
-
-The threshold affects matching behavior. Validate any change against the camera, lighting conditions, enrolled identities, and test dataset.
-
-### 8.4 Generate a Performance Report
+Run:
 
 ```bash
 /usr/bin/attendance-app --perf-report
 ```
 
-### 8.5 Inspect Runtime State
+The application reports performance information collected by the system.
 
-```bash
-ps | grep -E 'attendance-app|face-ai|pir-monitor|attendance-web'
-ls -l /run/pir-monitor/events.sock
-ls -l /var/lib/face-ai/
+The underlying performance data is stored at:
+
+```text
+/var/lib/face-ai/performance.csv
 ```
 
-Check the camera configuration locally without publishing its contents:
+Use the report to investigate processing delays, resource constraints, and changes in runtime behavior.
 
-```bash
-test -s /etc/wifi-camera.conf && echo "Camera configuration exists"
-```
+## 6. Testing and Performance
 
-### 8.6 Data Files
+The following results were reported during project testing:
 
-| File or Directory                  | Purpose                  |
-|------------------------------------|--------------------------|
-| `/var/lib/face-ai/faces.txt`       | Face embedding registry  |
-| `/var/lib/face-ai/attendance.csv`  | Attendance records       |
-| `/var/lib/face-ai/performance.csv` | Performance records      |
-| `/var/backups/face-ai`             | Default backup root      |
-| `/run/pir-monitor/events.sock`     | PIR event socket         |
+| Test | Reported result |
+|---|---|
+| Average boot-to-service-ready time | 30 seconds over 50 trials |
+| Continuous operation | 8 days |
+| Reboot testing | 50 reboot tests |
+| Power interruption testing | 20 interruptions while running |
+| Wi-Fi disconnect and recovery | 50 tests |
+| Face recognition rate | 96% preliminary result |
 
-## 9. Test Results
+### Performance Evaluation
 
-The following results were reported during internal project testing.
-
-| Test                              | Reported Result                  |
-|-----------------------------------|----------------------------------|
-| Average boot-to-service-ready time| 30 seconds over 50 trials        |
-| Average recognition processing time | 4.5 seconds over 100 trials    |
-| Continuous operation              | 3 days                           |
-| Reboot tests                      | 50 cycles                        |
-| Power interruption tests          | 20 interruptions while running   |
-| Wi-Fi disconnect/recovery tests   | 50 tests                         |
-| Reported face recognition rate    | 96%                              |
-
-
+| Metric | Result |
+|---|---:|
+| Yocto image file size | 185 MB |
+| Root filesystem size | 803.4 MB |
+| Average CPU usage at idle | 1.86% |
+| Average CPU usage during recognition | Approximately 34% |
+| Peak CPU usage during recognition | 58% |
+| Average system RAM usage at idle | 212 MB |
+| Peak system RAM usage during recognition | 235 MB |
+| Average RTSP camera stream frame rate | 15.02 FPS |
+| Number of recognition performance samples | 400 |
+| Average recognition processing time | 4,491 ms |
 
 
 
-## 10. Current Limitations and Future Work
-
-The current implementation provides the embedded attendance components and a read-only Web dashboard.
-
-The following Web management features remain future work unless implemented in a later revision:
-
-- Employee creation, editing, and deletion
-- Web-based face enrollment
-- Camera configuration management through the Web interface
-- Web-triggered backup and restore
-- User account management
-- Role-based access control and permission enforcement
-
-
-## 12. License and Third-Party Components
-
-Some recipes in this layer declare `LICENSE = "CLOSED"`. This recipe metadata does not, by itself, establish the license under which the project can be published.
-
-
----
-
-=======
-# Yocto-Based-Face-Recognition-Attendance-System
->>>>>>> 780cc10d882f51a0f6740689d49cfdd6a7ea95a5
