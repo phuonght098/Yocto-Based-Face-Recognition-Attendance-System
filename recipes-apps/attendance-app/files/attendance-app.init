@@ -1,0 +1,56 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+        mkdir -p /var/log
+        mkdir -p /run/pir-monitor
+
+        if ! pidof pir-monitor >/dev/null 2>&1; then
+            echo "Starting PIR monitor"
+            /usr/bin/pir-monitor \
+                >> /var/log/pir-monitor.log 2>&1 &
+        fi
+
+        # Wait for the PIR Unix socket.
+        i=0
+        while [ ! -S /run/pir-monitor/events.sock ] &&
+              [ "$i" -lt 20 ]; do
+            sleep 1
+            i=$((i + 1))
+        done
+        
+        if [ ! -S /run/pir-monitor/events.sock ]; then
+            echo "ERROR: PIR socket was not created" >&2
+       	    exit 1
+        fi
+
+        if ! pidof attendance-app >/dev/null 2>&1; then
+            echo "Starting attendance app"
+            /usr/bin/attendance-app \
+                >> /var/log/attendance-app.log 2>&1 &
+        fi
+        ;;
+
+    stop)
+        for p in $(pidof attendance-app 2>/dev/null); do
+            kill "$p" 2>/dev/null
+        done
+
+        for p in $(pidof pir-monitor 2>/dev/null); do
+            kill "$p" 2>/dev/null
+        done
+        ;;
+
+    restart)
+        "$0" stop
+        sleep 1
+        "$0" start
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0

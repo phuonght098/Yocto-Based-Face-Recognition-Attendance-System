@@ -1,0 +1,34 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2711";
+
+    fragment@0 {
+        target = <&spidev0>;
+        __overlay__ {
+            status = "disabled";
+        };
+    };
+
+    fragment@1 {
+        target = <&spi0>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            status = "okay";
+
+            st7735r: st7735r@0 {
+                compatible = "jianda,jd-t18003-t01";
+                reg = <0>;
+                spi-max-frequency = <8000000>;
+
+                dc-gpios = <&gpio 25 0>;
+                reset-gpios = <&gpio 24 0>;
+
+                rotation = <0>;
+                status = "okay";
+            };
+        };
+    };
+};

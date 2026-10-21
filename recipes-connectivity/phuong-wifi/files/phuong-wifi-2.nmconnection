@@ -1,0 +1,19 @@
+[connection]
+id=WiFi Backup
+type=wifi
+autoconnect=true
+autoconnect-priority=5
+
+[wifi]
+mode=infrastructure
+ssid=
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto

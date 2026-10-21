@@ -1,0 +1,19 @@
+[connection]
+id=Nice Houses 1.1
+type=wifi
+autoconnect=true
+autoconnect-priority=10
+
+[wifi]
+mode=infrastructure
+ssid=
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto

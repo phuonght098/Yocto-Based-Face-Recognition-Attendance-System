@@ -1,0 +1,20 @@
+[Unit]
+Description=PIR Motion Sensor Event Service
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pir-monitor
+Restart=on-failure
+RestartSec=2
+RuntimeDirectory=pir-monitor
+RuntimeDirectoryMode=0750
+User=root
+Group=root
+
+# The application creates /run/pir-monitor/events.sock.
+# Root-only access is intentional for the first bring-up.
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
