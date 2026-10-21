@@ -4,6 +4,7 @@ An embedded face recognition attendance system built with the Yocto Project for 
 
 The project provides a custom Yocto layer, `meta-phuong`, containing application recipes, system configuration, device-tree overlays, and kernel configuration required to build and deploy the system.
 <img width="1600" height="720" alt="9e099f21f50775592c16" src="https://github.com/user-attachments/assets/a6f36716-1ae6-48d3-837f-6a40f13eb322" />
+<img width="1851" height="1008" alt="image" src="https://github.com/user-attachments/assets/b6c07fa9-d143-4fc1-9d84-1f2fae6bea3d" />
 
 ## 1. Features
 
